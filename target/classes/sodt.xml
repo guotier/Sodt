@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/aop
+       http://www.springframework.org/schema/aop/spring-aop.xsd
+       http://www.springframework.org/schema/tx
+	   http://www.springframework.org/schema/tx/spring-tx-4.0.xsd
+       http://www.springframework.org/schema/context
+	   http://www.springframework.org/schema/context/spring-context-4.0.xsd
+       http://www.springframework.org/schema/task
+	   http://www.springframework.org/schema/task/spring-task-4.0.xsd">
+
+    <aop:aspectj-autoproxy />
+
+    <bean id="sodtAspect" class="com.lizi.sodt.aspect.SodtAspect">
+        <property name="transactionTemplate" ref="transactionTemplate"/>
+    </bean>
+
+    <bean id="transactionTemplate" class="com.lizi.sodt.core.support.TransactionTemplate" >
+        <property name="transactionDao" ref="transactionDao" />
+    </bean>
+
+    <!-- 数据库配置文件位置 -->
+    <context:property-placeholder location="classpath:sodt.properties"/>
+
+    <!-- 配置dbcp数据源 -->
+    <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+        <property name="driverClassName" value="${sodt.jdbc.driverClassName}"/>
+        <property name="url" value="${sodt.jdbc.url}"/>
+        <property name="username" value="${sodt.jdbc.username}"/>
+        <property name="password" value="${sodt.jdbc.password}"/>
+        <property name="minIdle" value="${sodt.jdbc.minIdle}"/>
+        <!-- 队列中的最大空闲数 -->
+        <property name="maxIdle" value="${sodt.jdbc.maxIdle}"/>
+        <!-- 队列中的最大等待数 -->
+        <property name="maxWait" value="${sodt.jdbc.maxWait}"/>
+        <!-- 最大活跃数 -->
+        <property name="maxActive" value="${sodt.jdbc.maxActive}"/>
+        <!-- 初始大小 -->
+        <property name="initialSize" value="${sodt.jdbc.initialSize}"/>
+        <property name="testOnBorrow" value="true"/>
+        <property name="testWhileIdle" value="true"/>
+        <property name="timeBetweenEvictionRunsMillis" value="3600000"/>
+        <property name="minEvictableIdleTimeMillis" value="18000000"/>
+        <property name="validationQuery" value="select 1"/>
+    </bean>
+
+    <!-- 使用JDBC事务 -->
+    <bean id="transactionManager"
+          class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!-- 使用annotation注解方式配置事务 -->
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+
+    <!-- define the SqlSessionFactory -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="typeAliasesPackage" value="com.lizi.sodt.core.domain"/>
+        <property name="configLocation" value="classpath:sodt-mybatis-config.xml"/>
+    </bean>
+
+    <!-- scan for mappers and let them be autowired -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.lizi.sodt.dao"/>
+    </bean>
+
+    <!-- spring上下文注入 反射的时候获取bean对象需要用到 -->
+    <bean id="springContextHolder" class="com.lizi.sodt.util.SpringContextHolder" />
+
+    <task:executor id="executor" pool-size="10"/>
+    <task:scheduler id="scheduler" pool-size="10"/>
+    <task:annotation-driven executor="executor" scheduler="scheduler"/>
+
+    <bean id="recoveryJob" class="com.lizi.sodt.revovery.SodtRecoveryJob">
+        <property name="transactionDao" ref="transactionDao" />
+    </bean>
+</beans>

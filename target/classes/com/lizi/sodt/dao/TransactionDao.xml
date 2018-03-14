@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.lizi.sodt.dao.TransactionDao">
+
+    <sql id="baseColumnList">
+        ID,
+        STATUS,
+        BEAN_NAME,
+        METHOD_NAME,
+        CANCEL_METHOD_NAME,
+        CONFIRM_METHOD_NAME,
+        PARAMETER_TYPES,
+        PARAMETERS,
+        CREATE_TIME,
+        UPDATE_TIME,
+        VERSION
+    </sql>
+
+    <insert id="save" parameterType="com.lizi.sodt.core.domain.Transaction">
+      INSERT INTO TRANSACTION (
+        <include refid="baseColumnList" />
+      ) VALUES (
+        #{id},
+        #{status},
+        #{beanName},
+        #{methodName},
+        #{cancelMethodName},
+        #{confirmMethodName},
+        #{parameterTypes},
+        #{parameters},
+        now(),
+        now(),
+        #{version}
+      )
+    </insert>
+
+    <update id="update" parameterType="com.lizi.sodt.core.domain.Transaction">
+        UPDATE TRANSACTION SET
+            STATUS = #{status},
+            BEAN_NAME = #{beanName},
+            METHOD_NAME = #{methodName},
+            CANCEL_METHOD_NAME = #{cancelMethodName},
+            CONFIRM_METHOD_NAME = #{confirmMethodName},
+            PARAMETER_TYPES = #{parameterTypes},
+            PARAMETERS = #{parameters},
+            UPDATE_TIME = now(),
+            VERSION = #{version} + 1
+        WHERE ID = #{id} AND VERSION = #{version}
+    </update>
+
+    <select id="findAllCancelingTransactions" resultType="com.lizi.sodt.core.domain.Transaction">
+        SELECT
+          <include refid="baseColumnList" />
+        FROM TRANSACTION
+        WHERE STATUS = 'CANCELING'
+    </select>
+
+    <select id="findAllConfirmingTransactions" resultType="com.lizi.sodt.core.domain.Transaction">
+        SELECT
+          <include refid="baseColumnList" />
+        FROM TRANSACTION
+        WHERE STATUS = 'CONFIRMING'
+    </select>
+
+</mapper>
